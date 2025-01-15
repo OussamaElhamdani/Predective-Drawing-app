@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=0.9,user-scalable=0">
+    <title>Drawing App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Foundation:wght@600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content">
+        <h1>Drawing app</h1>
+        <div id="prediction">
+            <!-- <h2>ddd</h1> -->
+        </div>
+        <div id="sketchpadContainer">
+            
+        </div>
+        <div class="buttons">
+            <button id="undo">undo</button>
+            <button id="clear">clear</button>
+            <button id="colors">colors</button>
+            <!-- <button id="erase">erase</button> -->
+            <button id="predict">predict</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <script>
+        const sketchpad = new Sketchpad(sketchpadContainer);// sketchpadContainer is being used as a variable, not a string. 
+        //When you use an id directly as a variable in JavaScript, it refers to the DOM element with that id.
+        
+        const undoButton = document.getElementById('undo');
+        const clearButton = document.getElementById('clear');
+        const colorsButton = document.getElementById('colors');
+        const predictButton = document.getElementById('predict');
+        let clicked = false;
+        let predvalue = false;
+        //////////UNDOOOOOOO////////////////
+        undoButton.addEventListener('click',()=>{
+            sketchpad.undo();
+            if(!sketchpad.len){
+                movebttn(colorsButton);
+                sketchpad.clrs = false;
+            }
+            if(predvalue){
+                removeprediction();
+                predvalue = false;
+            }
+        });
+        //////////////CLEAAAR/////////
+        clearButton.addEventListener('click', ()=>{
+            sketchpad.clear();
+            movebttn(colorsButton);
+            sketchpad.clrs = false;
+            if(predvalue){
+                removeprediction();
+                predvalue = false;
+            }
+        });
+        ////////////COLOOOOOOR//////////
+        colorsButton.addEventListener('click', ()=>{
+            movebttn(colorsButton);
+            sketchpad.colorize();
+        })
+        ///////////PREEEDIICT////////
+        predictButton.addEventListener('click', async ()=>{
+            //console.log(sketchpad.paths);
+            //const data = JSON.stringify(sketchpad.paths);
+            //console.log(data);
+            //console.log("number of paths in this draw : ", sketchpad.len);
+            // console.log("PRedict button is clicked");
+            if(sketchpad.len){
+                const screenshot = sketchpad.canvas.toDataURL();
+                // console.log(screenshot);
+                // Convert the data URL to a Blob
+                const screenshotBlob = await (await fetch(screenshot)).blob();
+
+                // Create a FormData object and append the Blob to it
+                const formData = new FormData();
+                formData.append('screenshot', screenshotBlob);
+
+                // Send the FormData object to the server
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => response.json()).then(data => {
+                    // Handle the prediction result
+                    // console.log(data);
+                    const divprediction = document.getElementById('prediction');
+                    const h2 = document.createElement('h2');
+                    h2.textContent = data.prediction;
+                    if(!predvalue){
+                        divprediction.appendChild(h2);
+                        predvalue = true;    
+                    }
+                });
+            }
+        })
+    </script>
+    <script>
+        function movebttn(Buttonn) {
+            if(sketchpad.len && !clicked){
+                Buttonn.style = `
+                    top: 4px;
+                `
+                clicked = true;
+            }else{
+                    Buttonn.style = `
+                        top: 0px;
+                    `
+                    clicked = false;
+                }
+        }
+        function removeprediction() {
+            const predictionDiv = document.getElementById('prediction');
+
+            // Remove all child elements of the div
+            while (predictionDiv.firstChild) {
+                predictionDiv.removeChild(predictionDiv.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>
